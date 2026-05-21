@@ -4,7 +4,9 @@
 void exibir_estacao_recarga();
 void menu_opcoes(int opcao);
 int isBateriaValido(float bateria_inicial);
+void verificar_porcentagem_bateria(int isBateriaValido());
 int isCapacidadeBateriaValido(float capacidade_bateria);
+int verificar_capacidade_bateria(int (*isCapacidadeBateriaValido)(float));
 float conversao_para_kwh(float bateria_inicial, float capacidade_bateria);
 float calcular_energia_consumida(float capacidade_bateria, float bateria_kwh);
 float calcular_tempo_recarga(float energia_necessaria);
@@ -29,14 +31,10 @@ int main() {
     menu_opcoes(opcao);
 
     // Verificando se o valor da portcentagem da bateria é válido
-    if (!isBateriaValido(bateria_inicial)) {
-        printf("Valor de Bateria inválido!\n");
-    }
+    verificar_porcentagem_bateria(!isBateriaValido, bateria_inicial);
 
-    //Verificando se o valor da capacidade da bateria é válido
-    if (!isCapacidadeBateriaValido(capacidade_bateria)) {
-        printf("Capacidade inválida!\n");
-    }
+    // Verificando se o valor da capacidade da bateria é válido
+    verificar_capacidade_bateria(!isCapacidadeBateriaValido, capacidade_bateria);
 
     //Cálculo do total de energia consumida
     energia_necessaria = calcular_energia_consumida(capacidade_bateria, conversao_para_kwh(bateria_inicial, capacidade_bateria));
@@ -88,8 +86,20 @@ int isBateriaValido(float bateria_inicial) {
     return bateria_inicial > 0 ||  bateria_inicial < 100;
 }
 
+void verificar_porcentagem_bateria(int (*isBateriaValido)(float)) {
+    if (!isBateriaValido(bateria_inicial)) {
+        printf("Valor de Bateria inválido!\n");
+    }
+}
+
 int isCapacidadeBateriaValido(float capacidade_bateria) {
     return capacidade_bateria >= 0;
+}
+
+int verificar_capacidade_bateria(int (*isCapacidadeBateriaValido)(float)) {
+    if (!isCapacidadeBateriaValido(capacidade_bateria)) {
+        printf("Capacidade inválida!\n");
+    }
 }
 
 //Função para converter a porcentagem da bateria em kwh
