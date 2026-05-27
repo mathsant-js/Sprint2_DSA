@@ -4,8 +4,8 @@ Sistema desenvolvido em linguagem C para simular o gerenciamento de uma estaçã
 
 O projeto implementa múltiplas sessões simultâneas, controle inteligente de potência, tarifação dinâmica, simulação de integração com protocolos industriais e geração de relatórios completos.
 
-Repositório oficial:
-[Sprint2_DSA no GitHub](docs/documentacao_projeto.pdf)
+Documentação Técnica do Projeto:
+[Documentação em PDF](docs/documentacao_projeto.pdf)
 
 # Integrantes
 
