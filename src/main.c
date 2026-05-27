@@ -1,17 +1,20 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <windows.h>
 #include <ctype.h>
 
+void iniciar_menu();
 void tela_inicial();
 void exibir_estacao_recarga();
 void menu_opcoes(int opcao);
+void voltar_tela_inicial();
 int entrada_valor_int(int *valor);
 float entrada_valor_float(float *valor);
-char entrada_valor_opcao(char resposta);
-int isBateriaValido(float bateria_inicial);
+void entrada_valor_opcao(char resposta);
+int bateria_valido(float bateria_inicial);
 void verificar_porcentagem_bateria(float bateria_inicial);
-int isCapacidadeBateriaValido(float capacidade_bateria);
+int capacidade_bateria_valido(float capacidade_bateria);
 void verificar_capacidade_bateria(float capacidade_bateria);
 float conversao_para_kwh(float bateria_inicial, float capacidade_bateria);
 float calcular_energia_consumida(float capacidade_bateria, float bateria_kwh);
@@ -47,35 +50,19 @@ int main() {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
-    int opcao;
-    float bateria_kwh;
-
-    tela_inicial();
-    entrada_valor_int(&opcao);
-    
-    menu_opcoes(opcao);
-
-    // Verificando se o valor da portcentagem da bateria é válido
-    verificar_porcentagem_bateria(bateria_inicial);
-
-    // Verificando se o valor da capacidade da bateria é válido
-    verificar_capacidade_bateria(capacidade_bateria);
-
-    bateria_kwh = conversao_para_kwh(bateria_inicial, capacidade_bateria);
-
-    // Cálculo do total de energia consumida
-    energia_necessaria = calcular_energia_consumida(capacidade_bateria, bateria_kwh);
-
-    // Tempo de recarga estimado, Potência do carregador: 75kW  
-    temp_recarga = calcular_tempo_recarga(energia_necessaria);
-
-    // Cálculo da cobrança do carregamento, preço médio do KWh em SP é R$0,80
-    total_pagar = calcular_pagamento(energia_necessaria);
-    
-    // Carregamento da bateria
-    bateria_final = carregar_bateria();
+    iniciar_menu();
 
     return 0;
+}
+
+void iniciar_menu() {
+    int opcao;
+
+    tela_inicial();
+
+    entrada_valor_int(&opcao);
+
+    menu_opcoes(opcao);
 }
 
 void tela_inicial() {
@@ -84,6 +71,7 @@ void tela_inicial() {
     printf("1 - Informações do Posto\n");
     printf("2 - Carregar Carro\n");
     printf("3 - Relatório Geral do Posto\n");
+    printf("4 - Sair do Programa\n");
     printf("Digite a opção: ");
 }
 
@@ -105,6 +93,43 @@ void menu_opcoes(int opcao) {
         exibir_posto();
         break;
     case 2:
+        float bateria_kwh;
+
+        // ==== Carregar Carro ====
+
+        // Verificando se o valor da portcentagem da bateria é válido
+        verificar_porcentagem_bateria(bateria_inicial);
+
+        // Verificando se o valor da capacidade da bateria é válido
+        verificar_capacidade_bateria(capacidade_bateria);
+
+        bateria_kwh = conversao_para_kwh(bateria_inicial, capacidade_bateria);
+
+        // Cálculo do total de energia consumida
+        energia_necessaria = calcular_energia_consumida(capacidade_bateria, bateria_kwh);
+
+        // Tempo de recarga estimado, Potência do carregador: 75kW  
+        temp_recarga = calcular_tempo_recarga(energia_necessaria);
+
+        // Cálculo da cobrança do carregamento, preço médio do KWh em SP é R$0,80
+        total_pagar = calcular_pagamento(energia_necessaria);
+        
+        // Carregamento da bateria
+        bateria_final = carregar_bateria();
+
+        relatorio_sessao(
+            bateria_inicial, 
+            bateria_final, 
+            energia_necessaria, 
+            total_pagar, 
+            temp_recarga
+        );
+
+        break;
+    case 3:
+        // Gerar relatório
+        break;
+    case 4:
         sair_programa();
         break;
     default:
@@ -134,38 +159,36 @@ float entrada_valor_float(float *valor) {
     return *valor;
 }
 
-char entrada_valor_opcao(char *resposta) {
-    resposta = tolower(resposta);
+void entrada_valor_opcao(char resposta) {
     if (resposta == 's') {
-        tela_inicial();
-    } else if (resposta == 'n')
-    {
+        iniciar_menu();
+    } else if (resposta == 'n') {
         sair_programa();
     } else {
-        printf("Valor inválido!");
-        entrada_valor_opcao(&resposta);
+        printf("Valor inválido!\nDigite exatamente 's' ou 'n': ");
+        scanf(" %c", &resposta);
+
+        entrada_valor_opcao(resposta);
     }
-    
-    return *resposta;
 }
 
-int isBateriaValido(float bateria_inicial) {
+int bateria_valido(float bateria_inicial) {
     return bateria_inicial >= 0 &&  bateria_inicial <= 100;
 }
 
 void verificar_porcentagem_bateria(float bateria_inicial) {
-    if (!isBateriaValido(bateria_inicial)) {
+    if (!bateria_valido(bateria_inicial)) {
         printf("Valor de Bateria inválido!\n");
         exit(0);
     }
 }
 
-int isCapacidadeBateriaValido(float capacidade_bateria) {
+int capacidade_bateria_valido(float capacidade_bateria) {
     return capacidade_bateria > 0;
 }
 
 void verificar_capacidade_bateria(float capacidade_bateria) {
-    if (!isCapacidadeBateriaValido(capacidade_bateria)) {
+    if (!capacidade_bateria_valido(capacidade_bateria)) {
         printf("Capacidade de bateria inválida!\n");
         exit(0);
     }
@@ -189,8 +212,10 @@ float calcular_pagamento(float energia_necessaria) {
 }
 
 void adicionar_carro() {
-    postos_carregamento[postos_utilizados] = 1;
-    postos_utilizados++;
+    if (postos_utilizados < tamanho_postos_carregamento) {
+        postos_carregamento[postos_utilizados] = 1;
+        postos_utilizados++;
+    }
 }
 
 float carregar_bateria() {
@@ -212,17 +237,20 @@ void exibir_posto() {
     printf("=============================================\n");
     printf("             Postos de Carregamento\n");
     printf("Total de Postos de Carregamento: %d\n", tamanho_postos_carregamento);
-    printf("Postos Disponíveis: %d", calcular_postos_disponiveis());
+    printf("Postos Disponíveis: %d\n", calcular_postos_disponiveis());
     voltar_tela_inicial();
 }
 
 void voltar_tela_inicial() {
-    int opcao;
-    printf("Você deseja voltar a tela inicial?");
-    printf("s - Sim");
-    printf("n - Não");
+    char opcao;
+
+    printf("\n\nVocê deseja voltar a tela inicial?\n");
+    printf("s - Sim\n");
+    printf("n - Não\n");
     printf("Digite a opção: ");
-    entrada_valor_opcao(&opcao);
+    scanf(" %c", &opcao);
+
+    entrada_valor_opcao(opcao);
 }
 
 void iniciar_sessao() {
