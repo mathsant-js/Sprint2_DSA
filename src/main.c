@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
+#include <ctype.h>
 
+void tela_inicial();
 void exibir_estacao_recarga();
 void menu_opcoes(int opcao);
-void entrada_valor_float(float *valor);
+int entrada_valor_int(int *valor);
+float entrada_valor_float(float *valor);
+char entrada_valor_opcao(char resposta);
 int isBateriaValido(float bateria_inicial);
 void verificar_porcentagem_bateria(float bateria_inicial);
 int isCapacidadeBateriaValido(float capacidade_bateria);
@@ -14,9 +19,16 @@ float calcular_tempo_recarga(float energia_necessaria);
 float calcular_pagamento(float energia_necessaria);
 void adicionar_carro();
 float carregar_bateria();
-void mostrar_postos_disponiveis();
+void exibir_posto();
 void iniciar_sessao();
-void relatorio_sessao();
+void relatorio_sessao(
+    float bateria_inicial, 
+    float bateria_final, 
+    float energia_necessaria, 
+    float total_pagar,
+    float temp_recarga
+);
+void sair_programa();
 
 const int POTENCIA_CARREGADOR = 75;
 const float VALOR_KWH = 0.8;
@@ -32,14 +44,14 @@ float capacidade_bateria;
 float temp_recarga;
 
 int main() {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
     int opcao;
     float bateria_kwh;
 
-    mostrar_postos_disponiveis();
-
-    // Formatação de entrada
-    exibir_estacao_recarga();
-    scanf("%d", &opcao);
+    tela_inicial();
+    entrada_valor_int(&opcao);
     
     menu_opcoes(opcao);
 
@@ -66,6 +78,14 @@ int main() {
     return 0;
 }
 
+void tela_inicial() {
+    printf("=================================\n");
+    printf("        Bem-Vindo!\n");
+    printf("1 - Informações do Posto\n");
+    printf("2 - Carregar Carro\n");
+    printf("3 - Relatório Geral do Posto\n");
+    printf("Digite a opção: ");
+}
 
 void exibir_estacao_recarga() {
     printf("=================================\n");
@@ -82,29 +102,51 @@ void menu_opcoes(int opcao) {
     switch (opcao)
     {
     case 1:
-        // Iniciar sessão de acordo com a disponibilidade dos postos de carregamento
-        if (postos_utilizados == tamanho_postos_carregamento) {
-            relatorio_sessao(bateria_inicial, bateria_final, energia_necessaria, total_pagar, temp_recarga);
-            exit(0);
-        } else {
-            iniciar_sessao();
-        }
+        exibir_posto();
         break;
     case 2:
-        exit(0);
+        sair_programa();
         break;
     default:
         printf("Valor inválido");
-        exit(0);
+        tela_inicial();
         break;
     }
 }
 
-void entrada_valor_float(float *valor) {
-    if (scanf("%f", valor) != 1) {
-        printf("[ERRO]: O valor deve ser numérico!\n");
-        exit(0);
+int entrada_valor_int(int *valor) {
+    while (scanf("%d", valor) != 1) {
+        printf("[ERRO]: Digite um número válido: ");
+
+        while (getchar() != '\n');
     }
+
+    return *valor;
+}
+
+float entrada_valor_float(float *valor) {
+    while (scanf("%f", valor) != 1) {
+        printf("[ERRO]: Digite um número inteiro válido: ");
+
+        while (getchar() != '\n');
+    }
+
+    return *valor;
+}
+
+char entrada_valor_opcao(char *resposta) {
+    resposta = tolower(resposta);
+    if (resposta == 's') {
+        tela_inicial();
+    } else if (resposta == 'n')
+    {
+        sair_programa();
+    } else {
+        printf("Valor inválido!");
+        entrada_valor_opcao(&resposta);
+    }
+    
+    return *resposta;
 }
 
 int isBateriaValido(float bateria_inicial) {
@@ -166,12 +208,21 @@ int calcular_postos_disponiveis() {
     return postos_disponiveis;
 }
 
-void mostrar_postos_disponiveis() {
+void exibir_posto() {
     printf("=============================================\n");
     printf("             Postos de Carregamento\n");
-    printf("Total de Postos de Carregamento: %d\n");
+    printf("Total de Postos de Carregamento: %d\n", tamanho_postos_carregamento);
     printf("Postos Disponíveis: %d", calcular_postos_disponiveis());
-    printf("=============================================\n\n");
+    voltar_tela_inicial();
+}
+
+void voltar_tela_inicial() {
+    int opcao;
+    printf("Você deseja voltar a tela inicial?");
+    printf("s - Sim");
+    printf("n - Não");
+    printf("Digite a opção: ");
+    entrada_valor_opcao(&opcao);
 }
 
 void iniciar_sessao() {
@@ -218,4 +269,9 @@ void relatorio_geral() {
     printf("Média das Capacidades das Baterias: %2.f\n", 0);
     printf("Média das Baterias Inciais: %2.f\n", 0);
     printf("=============================================");
+}
+
+void sair_programa() {
+    printf("\n\n======Programa Encerrado!======\n\n");
+    exit(0);
 }
