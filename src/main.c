@@ -17,7 +17,9 @@ typedef struct
     float energia_necessaria;
     float capacidade_bateria;
     float tempo_recarga;
-
+    float potencia_recebida;
+    float tarifa_aplicada;
+    int horario_recarga;
 } SessaoRecarga;
 
 typedef struct
@@ -51,7 +53,7 @@ int calcular_postos_disponiveis();
 /* RECARGA */
 void processar_recarga();
 void iniciar_sessao(SessaoRecarga *sessao, int indice);
-void processar_calculos(SessaoRecarga *sessao);
+void processar_calculos(SessaoRecarga *sessao, int carros_ativos);
 void salvar_sessao(SessaoRecarga sessao);
 
 /* VALIDAÇÕES */
@@ -64,6 +66,7 @@ float calcular_energia_consumida(float capacidade, float bateria_kwh);
 float calcular_tempo_recarga(float energia);
 float calcular_pagamento(float energia);
 float carregar_bateria();
+float calcular_potencia_dinamica(int carros_ativos);
 
 /* RELATÓRIOS */
 void relatorio_sessao(SessaoRecarga sessao);
@@ -228,7 +231,7 @@ void processar_recarga()
     {
         iniciar_sessao(&sessoes[i], i);
 
-        processar_calculos(&sessoes[i]);
+        processar_calculos(&sessoes[i], quantidade_carros);
 
         postos[i].ocupado = 1;
 
@@ -277,7 +280,7 @@ void iniciar_sessao(SessaoRecarga *sessao, int indice)
         sessao->bateria_inicial));
 }
 
-void processar_calculos(SessaoRecarga *sessao)
+void processar_calculos(SessaoRecarga *sessao, int carros_ativos)
 {
     float bateria_kwh;
 
@@ -291,6 +294,10 @@ void processar_calculos(SessaoRecarga *sessao)
             sessao->capacidade_bateria,
             bateria_kwh);
 
+    sessao->potencia_recebida =
+        calcular_potencia_dinamica(
+            carros_ativos);
+                
     sessao->tempo_recarga =
         calcular_tempo_recarga(
             sessao->energia_necessaria);
@@ -355,6 +362,26 @@ float carregar_bateria()
     return 100.0f;
 }
 
+float calcular_potencia_dinamica(int carros_ativos)
+{
+    if (carros_ativos == 1)
+    {
+        return 75.0f;
+    }
+
+    if (carros_ativos == 2)
+    {
+        return 60.0f;
+    }
+
+    if (carros_ativos == 3)
+    {
+        return 45.0f;
+    }
+
+    return 30.0f;
+}
+
 void relatorio_sessao(SessaoRecarga sessao)
 {
     printf("\n====================================\n");
@@ -369,6 +396,9 @@ void relatorio_sessao(SessaoRecarga sessao)
 
     printf("Capacidade da bateria: %.2f kWh\n",
            sessao.capacidade_bateria);
+    
+    printf("Potência aplicada: %.2f kW\n",
+           sessao.potencia_recebida);
 
     printf("Energia necessária: %.2f kWh\n",
            sessao.energia_necessaria);
@@ -386,6 +416,7 @@ void relatorio_geral()
     float total_valor = 0;
     float total_tempo = 0;
     float media_capacidade = 0;
+    float media_potencia = 0;
     float media_bateria = 0;
 
     if (total_sessoes == 0)
@@ -409,11 +440,16 @@ void relatorio_geral()
         media_capacidade +=
             historico[i].capacidade_bateria;
 
+        media_potencia +=
+            historico[i].potencia_recebida;
+
         media_bateria +=
             historico[i].bateria_inicial;
     }
 
     media_capacidade /= total_sessoes;
+
+    media_potencia /= total_sessoes;
 
     media_bateria /= total_sessoes;
 
@@ -441,6 +477,9 @@ void relatorio_geral()
 
     printf("Média capacidade bateria: %.2f kWh\n",
            media_capacidade);
+
+    printf("Média de potência: %2.f kW\n",
+            media_potencia);
 
     printf("Média bateria inicial: %.2f%%\n",
            media_bateria);
