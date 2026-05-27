@@ -13,7 +13,7 @@ Documentação Técnica do Projeto:
 - Bruno Almeida de Oliveira | 572648
 - Gabriel Góes Nunes Pereira | 571735
 - Guilherme Vinciguerra Carvalho | 571951
-- Marcos Peterson MartinsPereira | 573857
+- Marcos Peterson Martins Pereira | 573857
 - Matheus Jorge Santana | 574166
 
 
