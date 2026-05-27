@@ -29,7 +29,6 @@ typedef struct
 
 } Posto;
 
-
 Posto postos[MAX_POSTOS] = {0};
 
 SessaoRecarga historico[MAX_SESSOES];
@@ -67,6 +66,11 @@ float calcular_tempo_recarga(float energia);
 float calcular_pagamento(float energia);
 float carregar_bateria();
 float calcular_potencia_dinamica(int carros_ativos);
+float calcular_tarifa_dinamica(int horario);
+
+/* ENVIO DE DADOS */
+void enviar_dados_ocpp(SessaoRecarga sessao);
+void enviar_modbus(float potencia);
 
 /* RELATÓRIOS */
 void relatorio_sessao(SessaoRecarga sessao);
@@ -172,7 +176,8 @@ float ler_float()
 
 void limpar_buffer()
 {
-    while (getchar() != '\n');
+    while (getchar() != '\n')
+        ;
 }
 
 int calcular_postos_disponiveis()
@@ -233,6 +238,12 @@ void processar_recarga()
 
         processar_calculos(&sessoes[i], quantidade_carros);
 
+        enviar_modbus(
+            sessoes[i].potencia_recebida);
+
+        enviar_dados_ocpp(
+            sessoes[i]);
+
         postos[i].ocupado = 1;
 
         postos[i].sessao = sessoes[i];
@@ -278,6 +289,17 @@ void iniciar_sessao(SessaoRecarga *sessao, int indice)
 
     } while (!bateria_valida(
         sessao->bateria_inicial));
+
+    do
+    {
+        printf("Horário da recarga (0-23): ");
+
+        sessao->horario_recarga =
+            ler_int();
+
+    } while (
+        sessao->horario_recarga < 0 ||
+        sessao->horario_recarga > 23);
 }
 
 void processar_calculos(SessaoRecarga *sessao, int carros_ativos)
@@ -297,14 +319,18 @@ void processar_calculos(SessaoRecarga *sessao, int carros_ativos)
     sessao->potencia_recebida =
         calcular_potencia_dinamica(
             carros_ativos);
-                
+
+    sessao->tarifa_aplicada =
+        calcular_tarifa_dinamica(
+            sessao->horario_recarga);
+
     sessao->tempo_recarga =
-        calcular_tempo_recarga(
-            sessao->energia_necessaria);
+        (sessao->energia_necessaria /
+         sessao->potencia_recebida) *
+        HORAS_EM_MINUTOS;
 
     sessao->total_pagar =
-        calcular_pagamento(
-            sessao->energia_necessaria);
+        sessao->energia_necessaria * sessao->tarifa_aplicada;
 
     sessao->bateria_final =
         carregar_bateria();
@@ -335,8 +361,7 @@ float converter_para_kwh(
     float bateria,
     float capacidade)
 {
-    return (bateria / 100.0f)
-           * capacidade;
+    return (bateria / 100.0f) * capacidade;
 }
 
 float calcular_energia_consumida(
@@ -348,8 +373,7 @@ float calcular_energia_consumida(
 
 float calcular_tempo_recarga(float energia)
 {
-    return (energia / POTENCIA_CARREGADOR)
-           * HORAS_EM_MINUTOS;
+    return (energia / POTENCIA_CARREGADOR) * HORAS_EM_MINUTOS;
 }
 
 float calcular_pagamento(float energia)
@@ -382,6 +406,43 @@ float calcular_potencia_dinamica(int carros_ativos)
     return 30.0f;
 }
 
+float calcular_tarifa_dinamica(int horario)
+{
+    if (horario >= 18 && horario <= 22)
+    {
+        return 1.20f;
+    }
+
+    if (horario >= 0 && horario <= 6)
+    {
+        return 0.50f;
+    }
+
+    return 0.80f;
+}
+
+void enviar_dados_ocpp(SessaoRecarga sessao)
+{
+    printf("\n[OCPP] Enviando dados da sessão...\n");
+
+    printf("[OCPP] Energia: %.2f kWh\n",
+           sessao.energia_necessaria);
+
+    printf("[OCPP] Valor: R$ %.2f\n",
+           sessao.total_pagar);
+
+    printf("[OCPP] Potência aplicada: %.2f kW\n",
+           sessao.potencia_recebida);
+
+    printf("[OCPP] Sessão finalizada\n");
+}
+
+void enviar_modbus(float potencia)
+{
+    printf("[MODBUS] Potência enviada: %.2f kW\n",
+           potencia);
+}
+
 void relatorio_sessao(SessaoRecarga sessao)
 {
     printf("\n====================================\n");
@@ -396,15 +457,21 @@ void relatorio_sessao(SessaoRecarga sessao)
 
     printf("Capacidade da bateria: %.2f kWh\n",
            sessao.capacidade_bateria);
+
+    printf("Energia necessária: %.2f kWh\n",
+           sessao.energia_necessaria);
     
     printf("Potência aplicada: %.2f kW\n",
            sessao.potencia_recebida);
 
-    printf("Energia necessária: %.2f kWh\n",
-           sessao.energia_necessaria);
-
     printf("Tempo estimado: %.2f minutos\n",
            sessao.tempo_recarga);
+    
+    printf("Horário: %dh\n",
+       sessao.horario_recarga);
+
+    printf("Tarifa aplicada: R$ %.2f/kWh\n",
+       sessao.tarifa_aplicada);
 
     printf("Valor total: R$ %.2f\n",
            sessao.total_pagar);
@@ -479,7 +546,7 @@ void relatorio_geral()
            media_capacidade);
 
     printf("Média de potência: %2.f kW\n",
-            media_potencia);
+           media_potencia);
 
     printf("Média bateria inicial: %.2f%%\n",
            media_bateria);
