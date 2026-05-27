@@ -1,156 +1,456 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
 
-void exibir_estacao_recarga();
-void menu_opcoes(int opcao);
-void entrada_valor_float(float *valor);
-int isBateriaValido(float bateria_inicial);
-void verificar_porcentagem_bateria(float bateria_inicial);
-int isCapacidadeBateriaValido(float capacidade_bateria);
-void verificar_capacidade_bateria(float capacidade_bateria);
-float conversao_para_kwh(float bateria_inicial, float capacidade_bateria);
-float calcular_energia_consumida(float capacidade_bateria, float bateria_kwh);
-float calcular_tempo_recarga(float energia_necessaria);
-float calcular_pagamento(float energia_necessaria);
-float carregar_bateria();
-void relatorio_sessao();
+#define MAX_POSTOS 5
+#define MAX_SESSOES 100
 
 const int POTENCIA_CARREGADOR = 75;
-const float VALOR_KWH = 0.8;
+const float VALOR_KWH = 0.8f;
 const int HORAS_EM_MINUTOS = 60;
-float bateria_inicial;
-float bateria_final;
-float total_pagar;
-float energia_necessaria;
-float capacidade_bateria;
-float temp_recarga;
 
-int main() {
-    int opcao;
-    float bateria_kwh;
+typedef struct
+{
+    float bateria_inicial;
+    float bateria_final;
+    float total_pagar;
+    float energia_necessaria;
+    float capacidade_bateria;
+    float tempo_recarga;
 
-    // Formatação de entrada
-    exibir_estacao_recarga();
-    scanf("%d", &opcao);
-    
-    menu_opcoes(opcao);
+} SessaoRecarga;
 
-    // Verificando se o valor da portcentagem da bateria é válido
-    verificar_porcentagem_bateria(bateria_inicial);
+typedef struct
+{
+    int ocupado;
+    SessaoRecarga sessao;
 
-    // Verificando se o valor da capacidade da bateria é válido
-    verificar_capacidade_bateria(capacidade_bateria);
+} Posto;
 
-    bateria_kwh = conversao_para_kwh(bateria_inicial, capacidade_bateria);
 
-    // Cálculo do total de energia consumida
-    energia_necessaria = calcular_energia_consumida(capacidade_bateria, bateria_kwh);
+Posto postos[MAX_POSTOS] = {0};
 
-    // Tempo de recarga estimado, Potência do carregador: 75kW  
-    temp_recarga = calcular_tempo_recarga(energia_necessaria);
+SessaoRecarga historico[MAX_SESSOES];
 
-    // Cálculo da cobrança do carregamento, preço médio do KWh em SP é R$0,80
-    total_pagar = calcular_pagamento(energia_necessaria);
-    
-    // Carregamento da bateria
-    bateria_final = carregar_bateria();
+int total_sessoes = 0;
 
-    // Formatação da saída e registros da sessão de recarga
-    relatorio_sessao();
-    
+/* MENU */
+void iniciar_menu();
+void exibir_menu();
+void menu_opcoes(int opcao);
+
+/* ENTRADA */
+int ler_int();
+float ler_float();
+void limpar_buffer();
+
+/* POSTOS */
+void exibir_posto();
+int calcular_postos_disponiveis();
+
+/* RECARGA */
+void processar_recarga();
+void iniciar_sessao(SessaoRecarga *sessao, int indice);
+void processar_calculos(SessaoRecarga *sessao);
+void salvar_sessao(SessaoRecarga sessao);
+
+/* VALIDAÇÕES */
+int bateria_valida(float bateria);
+int capacidade_valida(float capacidade);
+
+/* CÁLCULOS */
+float converter_para_kwh(float bateria, float capacidade);
+float calcular_energia_consumida(float capacidade, float bateria_kwh);
+float calcular_tempo_recarga(float energia);
+float calcular_pagamento(float energia);
+float carregar_bateria();
+
+/* RELATÓRIOS */
+void relatorio_sessao(SessaoRecarga sessao);
+void relatorio_geral();
+
+/* SISTEMA */
+void sair_programa();
+
+int main()
+{
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    while (1)
+    {
+        iniciar_menu();
+    }
+
     return 0;
 }
 
-void exibir_estacao_recarga() {
-    printf("=================================\n");
-    printf("        Estação De Recarga\n");
-    printf("1 - Iniciar recarga - 2 - Sair: ");
+void iniciar_menu()
+{
+    int opcao;
+
+    exibir_menu();
+
+    opcao = ler_int();
+
+    menu_opcoes(opcao);
 }
 
-void menu_opcoes(int opcao) {
+void exibir_menu()
+{
+    printf("\n====================================\n");
+    printf("      ESTAÇÃO DE RECARGA EV\n");
+    printf("====================================\n");
+
+    printf("1 - Informações do Posto\n");
+    printf("2 - Carregar Carros\n");
+    printf("3 - Relatório Geral\n");
+    printf("4 - Sair\n");
+
+    printf("Digite a opção: ");
+}
+
+void menu_opcoes(int opcao)
+{
     switch (opcao)
     {
     case 1:
-        printf("\n=================================\n");
-        printf("         Sessão iniciada\n");
-        printf("Conecte O Carregador Ao Seu Carro\n");
-
-        printf("Digite a capacidade da bateria do seu carro: ");
-        entrada_valor_float(&capacidade_bateria);
-
-        printf("Digite a porcentagem da bateria do seu carro: ");
-        entrada_valor_float(&bateria_inicial);
-
-        printf("=================================\n\n");
+        exibir_posto();
         break;
+
     case 2:
-        exit(0);
+        processar_recarga();
         break;
+
+    case 3:
+        relatorio_geral();
+        break;
+
+    case 4:
+        sair_programa();
+        break;
+
     default:
-        printf("Valor inválido");
-        exit(0);
-        break;
+        printf("\n[ERRO] Opção inválida!\n");
     }
 }
 
-void entrada_valor_float(float *valor) {
-    if (scanf("%f", valor) != 1) {
-        printf("[ERRO]: O valor deve ser numérico!\n");
-        exit(0);
+int ler_int()
+{
+    int valor;
+
+    while (scanf("%d", &valor) != 1)
+    {
+        printf("[ERRO] Digite um inteiro válido: ");
+
+        limpar_buffer();
+    }
+
+    limpar_buffer();
+
+    return valor;
+}
+
+float ler_float()
+{
+    float valor;
+
+    while (scanf("%f", &valor) != 1)
+    {
+        printf("[ERRO] Digite um número válido: ");
+
+        limpar_buffer();
+    }
+
+    limpar_buffer();
+
+    return valor;
+}
+
+void limpar_buffer()
+{
+    while (getchar() != '\n');
+}
+
+int calcular_postos_disponiveis()
+{
+    int disponiveis = 0;
+
+    for (int i = 0; i < MAX_POSTOS; i++)
+    {
+        if (!postos[i].ocupado)
+        {
+            disponiveis++;
+        }
+    }
+
+    return disponiveis;
+}
+
+void exibir_posto()
+{
+    printf("\n====================================\n");
+    printf("         POSTOS DISPONÍVEIS\n");
+    printf("====================================\n");
+
+    printf("Total de postos: %d\n", MAX_POSTOS);
+
+    printf("Postos disponíveis: %d\n",
+           calcular_postos_disponiveis());
+
+    printf("Postos ocupados: %d\n",
+           MAX_POSTOS - calcular_postos_disponiveis());
+}
+
+void processar_recarga()
+{
+    int quantidade_carros;
+
+    printf("\nQuantos carros deseja carregar? ");
+
+    do
+    {
+        quantidade_carros = ler_int();
+
+        if (quantidade_carros <= 0 ||
+            quantidade_carros > MAX_POSTOS)
+        {
+            printf("[ERRO] Digite um valor entre 1 e %d: ",
+                   MAX_POSTOS);
+        }
+
+    } while (quantidade_carros <= 0 ||
+             quantidade_carros > MAX_POSTOS);
+
+    SessaoRecarga sessoes[MAX_POSTOS];
+
+    for (int i = 0; i < quantidade_carros; i++)
+    {
+        iniciar_sessao(&sessoes[i], i);
+
+        processar_calculos(&sessoes[i]);
+
+        postos[i].ocupado = 1;
+
+        postos[i].sessao = sessoes[i];
+
+        salvar_sessao(sessoes[i]);
+
+        relatorio_sessao(sessoes[i]);
     }
 }
 
-int isBateriaValido(float bateria_inicial) {
-    return bateria_inicial >= 0 &&  bateria_inicial <= 100;
+void iniciar_sessao(SessaoRecarga *sessao, int indice)
+{
+    printf("\n====================================\n");
+    printf("            CARRO %d\n", indice + 1);
+    printf("====================================\n");
+
+    do
+    {
+        printf("Capacidade da bateria (kWh): ");
+
+        sessao->capacidade_bateria = ler_float();
+
+        if (!capacidade_valida(
+                sessao->capacidade_bateria))
+        {
+            printf("[ERRO] Valor inválido!\n");
+        }
+
+    } while (!capacidade_valida(
+        sessao->capacidade_bateria));
+
+    do
+    {
+        printf("Bateria atual (0%% a 100%%): ");
+
+        sessao->bateria_inicial = ler_float();
+
+        if (!bateria_valida(
+                sessao->bateria_inicial))
+        {
+            printf("[ERRO] Valor inválido!\n");
+        }
+
+    } while (!bateria_valida(
+        sessao->bateria_inicial));
 }
 
-void verificar_porcentagem_bateria(float bateria_inicial) {
-    if (!isBateriaValido(bateria_inicial)) {
-        printf("Valor de Bateria inválido!\n");
-        exit(0);
+void processar_calculos(SessaoRecarga *sessao)
+{
+    float bateria_kwh;
+
+    bateria_kwh =
+        converter_para_kwh(
+            sessao->bateria_inicial,
+            sessao->capacidade_bateria);
+
+    sessao->energia_necessaria =
+        calcular_energia_consumida(
+            sessao->capacidade_bateria,
+            bateria_kwh);
+
+    sessao->tempo_recarga =
+        calcular_tempo_recarga(
+            sessao->energia_necessaria);
+
+    sessao->total_pagar =
+        calcular_pagamento(
+            sessao->energia_necessaria);
+
+    sessao->bateria_final =
+        carregar_bateria();
+}
+
+void salvar_sessao(SessaoRecarga sessao)
+{
+    if (total_sessoes < MAX_SESSOES)
+    {
+        historico[total_sessoes] = sessao;
+
+        total_sessoes++;
     }
 }
 
-int isCapacidadeBateriaValido(float capacidade_bateria) {
-    return capacidade_bateria > 0;
+int bateria_valida(float bateria)
+{
+    return bateria >= 0 &&
+           bateria <= 100;
 }
 
-void verificar_capacidade_bateria(float capacidade_bateria) {
-    if (!isCapacidadeBateriaValido(capacidade_bateria)) {
-        printf("Capacidade de bateria inválida!\n");
-        exit(0);
+int capacidade_valida(float capacidade)
+{
+    return capacidade > 0;
+}
+
+float converter_para_kwh(
+    float bateria,
+    float capacidade)
+{
+    return (bateria / 100.0f)
+           * capacidade;
+}
+
+float calcular_energia_consumida(
+    float capacidade,
+    float bateria_kwh)
+{
+    return capacidade - bateria_kwh;
+}
+
+float calcular_tempo_recarga(float energia)
+{
+    return (energia / POTENCIA_CARREGADOR)
+           * HORAS_EM_MINUTOS;
+}
+
+float calcular_pagamento(float energia)
+{
+    return energia * VALOR_KWH;
+}
+
+float carregar_bateria()
+{
+    return 100.0f;
+}
+
+void relatorio_sessao(SessaoRecarga sessao)
+{
+    printf("\n====================================\n");
+    printf("       RELATÓRIO DA RECARGA\n");
+    printf("====================================\n");
+
+    printf("Bateria inicial: %.2f%%\n",
+           sessao.bateria_inicial);
+
+    printf("Bateria final: %.2f%%\n",
+           sessao.bateria_final);
+
+    printf("Capacidade da bateria: %.2f kWh\n",
+           sessao.capacidade_bateria);
+
+    printf("Energia necessária: %.2f kWh\n",
+           sessao.energia_necessaria);
+
+    printf("Tempo estimado: %.2f minutos\n",
+           sessao.tempo_recarga);
+
+    printf("Valor total: R$ %.2f\n",
+           sessao.total_pagar);
+}
+
+void relatorio_geral()
+{
+    float total_energia = 0;
+    float total_valor = 0;
+    float total_tempo = 0;
+    float media_capacidade = 0;
+    float media_bateria = 0;
+
+    if (total_sessoes == 0)
+    {
+        printf("\n[INFO] Nenhuma sessão registrada.\n");
+
+        return;
     }
+
+    for (int i = 0; i < total_sessoes; i++)
+    {
+        total_energia +=
+            historico[i].energia_necessaria;
+
+        total_valor +=
+            historico[i].total_pagar;
+
+        total_tempo +=
+            historico[i].tempo_recarga;
+
+        media_capacidade +=
+            historico[i].capacidade_bateria;
+
+        media_bateria +=
+            historico[i].bateria_inicial;
+    }
+
+    media_capacidade /= total_sessoes;
+
+    media_bateria /= total_sessoes;
+
+    printf("\n====================================\n");
+    printf("         RELATÓRIO GERAL\n");
+    printf("====================================\n");
+
+    printf("Total de postos: %d\n",
+           MAX_POSTOS);
+
+    printf("Postos disponíveis: %d\n",
+           calcular_postos_disponiveis());
+
+    printf("Total de sessões: %d\n",
+           total_sessoes);
+
+    printf("Energia total consumida: %.2f kWh\n",
+           total_energia);
+
+    printf("Valor total arrecadado: R$ %.2f\n",
+           total_valor);
+
+    printf("Tempo total de recarga: %.2f min\n",
+           total_tempo);
+
+    printf("Média capacidade bateria: %.2f kWh\n",
+           media_capacidade);
+
+    printf("Média bateria inicial: %.2f%%\n",
+           media_bateria);
 }
 
-// Função para converter a porcentagem da bateria em kwh
-float conversao_para_kwh(float bateria_inicial, float capacidade_bateria) {
-    return (bateria_inicial / 100) * capacidade_bateria;
-}
+void sair_programa()
+{
+    printf("\n====================================\n");
+    printf("       PROGRAMA ENCERRADO\n");
+    printf("====================================\n");
 
-float calcular_energia_consumida(float capacidade_bateria, float bateria_kwh) {
-    return capacidade_bateria - bateria_kwh;
-}
-
-float calcular_tempo_recarga(float energia_necessaria) {
-    return (energia_necessaria / POTENCIA_CARREGADOR) * HORAS_EM_MINUTOS;
-}
-
-float calcular_pagamento(float energia_necessaria) {
-    return energia_necessaria * VALOR_KWH;
-}
-
-float carregar_bateria() {
-    return 100;
-}
-
-void relatorio_sessao() {
-    printf("=============================================\n");
-    printf("             Relatório Da Sessão\n");
-    printf("Carga inicial da bateria: %.2f%%\n", bateria_inicial);
-    printf("Carga atual da bateria: %.0f%%\n", bateria_final);
-    printf("Energia Carregada: %.2f kWh\n", energia_necessaria);
-    printf("Preço da recarga: R$%.2f\n", total_pagar);
-    printf("Tempo de recarga estimado: %.0f min\n", temp_recarga);
-    printf("              Sessão finalizada\n");
-    printf("=============================================");
+    exit(EXIT_SUCCESS);
 }
