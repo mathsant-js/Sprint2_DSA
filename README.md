@@ -139,6 +139,42 @@ O código foi organizado em módulos lógicos:
 * Comunicação;
 * Validações.
 
+# Demonstração prática
+
+![1 - Informação do Posto](img/1_info_posto.png)
+
+<br>
+
+![2 - Relatório Geral sem carros](img/2_relatorio_geral_sem_info.png)
+
+<br>
+
+![3 - Carro 2 da manhã](img/3_1_carro_2_manha.png)
+
+<br>
+
+![4 - Carro 2 da manhã](img/4_3_carro_2_manha.png)
+
+<br>
+
+![5 - Carro 8 da noite](img/5_3_carro_20_horas.png)
+
+<br>
+
+![6 - Carro 23 horas](img/6_3_carro_23_horas.png)
+
+<br>
+
+![7 - Relatório Geral com informações](img/7_relatorio_geral_com_info.png)
+
+<br>
+
+![8 - Informação do Posto Após Recarga](img/8_info_posto_apos_recarga.png)
+
+<br>
+
+![9 - Programa Encerrado](img/9_programa_encerrado.png)
+
 # Como Executar
 
 ## Compilar
