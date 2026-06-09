@@ -9,13 +9,14 @@ Documentação Técnica do Projeto:
 
 # Integrantes
 
-- Bernardo Zauza Amorim | 568808
-- Bruno Almeida de Oliveira | 572648
-- Gabriel Góes Nunes Pereira | 571735
-- Guilherme Vinciguerra Carvalho | 571951
-- Marcos Peterson Martins Pereira | 573857
-- Matheus Jorge Santana | 574166
-
+| Nomes Completos                   | RM's   |
+|-----------------------------------|--------|
+| Bernardo Zauza Amorim             | 568808 |
+| Bruno Almeida de Oliveira         | 572648 |
+| Gabriel Góes Nunes Pereira        | 571735 |
+| Guilherme Vinciguerra Carvalho    | 571951 |
+| Marcos Peterson Martins Pereira   | 573857 |
+| Matheus Jorge Santana             | 574166 |
 
 # Objetivo do Projeto
 
